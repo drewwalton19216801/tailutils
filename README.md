@@ -87,7 +87,7 @@ Managing network interfaces and parsing IP ranges can be intricate and error-pro
 
 ## Contributing
 
-We welcome contributions to `tailutils`! If you find any issues or have ideas for new features, please feel free to open an issue or submit a pull request on [GitHub](https://github.com/drewwalton19216801/tailutils).
+We welcome contributions to `tailutils`! If you find any issues or have ideas for new features, please feel free to open an issue or submit a pull request.
 
 ## License
 
