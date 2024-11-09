@@ -1,4 +1,6 @@
-# Introduction
+# Tailutils
+
+[![Go](https://github.com/drewwalton19216801/tailutils/actions/workflows/go.yml/badge.svg)](https://github.com/drewwalton19216801/tailutils/actions/workflows/go.yml)
 
 ## What is `tailutils`?
 
