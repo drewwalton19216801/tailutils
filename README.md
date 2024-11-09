@@ -4,7 +4,7 @@
 
 `tailutils` is a Go library designed to simplify interactions with Tailscale network interfaces on a machine. It currently provides two primary functions:
 
-- `HasTailscaleIP`: Checks whether the machine has an active IPv4 Tailscale interface.
+- `HasTailscaleIP`: Checks whether the machine has an active Tailscale interface.
 - `GetTailscaleIP`: Retrieves the IPv4 address assigned to the Tailscale interface.
 - `GetTailscaleIP6`: Retrieves the IPv6 address assigned to the Tailscale interface.
 
