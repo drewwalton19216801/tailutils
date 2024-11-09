@@ -90,13 +90,33 @@ func getTailscaleIP(netImpl Network) (string, error) {
 	return "", fmt.Errorf("tailscale interface not found")
 }
 
-// HasTailscaleIP returns true if the machine has a Tailscale interface.
+// HasTailscaleIP returns true if the machine has a Tailscale interface (either IPv4 or IPv6).
 func HasTailscaleIP() (bool, error) {
-	return hasTailscaleIP(DefaultNetwork)
+	// Check if the machine has a Tailscale IPv4 interface
+	hasIPv4, err := hasTailscaleIP(DefaultNetwork)
+	if err != nil {
+		return false, err
+	}
+
+	// Check if the machine has a Tailscale IPv6 interface
+	hasIPv6, err := hasTailscaleIP6(DefaultNetwork)
+	if err != nil {
+		return false, err
+	}
+
+	return hasIPv4 || hasIPv6, nil
 }
 
 func hasTailscaleIP(netImpl Network) (bool, error) {
 	_, err := getTailscaleIP(netImpl)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func hasTailscaleIP6(netImpl Network) (bool, error) {
+	_, err := getTailscaleIP6(netImpl)
 	if err != nil {
 		return false, err
 	}
@@ -155,17 +175,4 @@ func getTailscaleIP6(netImpl Network) (string, error) {
 	}
 
 	return "", fmt.Errorf("tailscale IPv6 interface not found")
-}
-
-// HasTailscaleIP6 returns true if the machine has a Tailscale IPv6 interface.
-func HasTailscaleIP6() (bool, error) {
-	return hasTailscaleIP6(DefaultNetwork)
-}
-
-func hasTailscaleIP6(netImpl Network) (bool, error) {
-	_, err := getTailscaleIP6(netImpl)
-	if err != nil {
-		return false, err
-	}
-	return true, nil
 }
