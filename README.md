@@ -85,6 +85,12 @@ func main() {
 
 Managing network interfaces and parsing IP ranges can be intricate and error-prone. `tailutils` abstracts these complexities, offering a straightforward API to interact with Tailscale interfaces reliably. If you're building an application that needs to determine whether it is connected to a Tailscale VPN or wants to retrieve Tailscale IP addresses for various purposes, `tailutils` provides a clean and easy-to-use solution.
 
+## Projects using `tailutils`
+
+- [Padserve](https://github.com/drewwalton19216801/padserve) - A secure and private messaging system for Tailscale users.
+
+Want your project listed here? [Submit a Pull Request](https://github.com/drewwalton19216801/tailutils/pulls)!
+
 ## Contributing
 
 We welcome contributions to `tailutils`! Please refer to the [CONTRIBUTING.md](docs/CONTRIBUTING.md) file for more information.
