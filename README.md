@@ -87,7 +87,8 @@ Managing network interfaces and parsing IP ranges can be intricate and error-pro
 
 ## Projects using `tailutils`
 
-- [Padserve](https://github.com/drewwalton19216801/padserve) - A secure and private messaging system for Tailscale users.
+- [Padserve](https://github.com/drewwalton19216801/padserve) - The server component of a secure and private messaging system for Tailscale users.
+- [Padclient](https://github.com/drewwalton19216801/padclient) - The client component of a secure and private messaging system for Tailscale users.
 
 Want your project listed here? [Submit a Pull Request](https://github.com/drewwalton19216801/tailutils/pulls)!
 
