@@ -13,6 +13,7 @@ var (
 // Network is an interface that abstracts the network operations used in tailutils.
 type Network interface {
 	ParseCIDR(s string) (*net.IP, *net.IPNet, error)
+	ParseIP(s string) (*net.IP, error)
 	Interfaces() ([]net.Interface, error)
 	Addrs(iface net.Interface) ([]net.Addr, error)
 }
@@ -23,6 +24,11 @@ type RealNetwork struct{}
 func (rn *RealNetwork) ParseCIDR(s string) (*net.IP, *net.IPNet, error) {
 	ip, ipNet, err := net.ParseCIDR(s)
 	return &ip, ipNet, err
+}
+
+func (rn *RealNetwork) ParseIP(s string) (*net.IP, error) {
+	ip := net.ParseIP(s)
+	return &ip, nil
 }
 
 func (rn *RealNetwork) Interfaces() ([]net.Interface, error) {
@@ -175,4 +181,57 @@ func getTailscaleIP6(netImpl Network) (string, error) {
 	}
 
 	return "", fmt.Errorf("tailscale IPv6 interface not found")
+}
+
+// GetInterfaceName returns the name of the network interface for the given IP address
+func GetInterfaceName(ip string) (string, error) {
+	return getInterfaceName(DefaultNetwork, ip)
+}
+
+// getInterfaceName returns the name of the network interface for the given IP address, but
+// only for Tailscale IP ranges.
+func getInterfaceName(netImpl Network, ip string) (string, error) {
+	// Ensure the IP address given is within the Tailscale IPv4 or IPv6 range
+	_, tsNet, err := netImpl.ParseCIDR(TailscaleIP4CIDR)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse Tailscale IP range: %v", err)
+	}
+	_, tsNet6, err := netImpl.ParseCIDR(TailscaleIP6CIDR)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse Tailscale IPv6 range: %v", err)
+	}
+	if !tsNet.Contains(net.ParseIP(ip)) && !tsNet6.Contains(net.ParseIP(ip)) {
+		return "", fmt.Errorf("IP address %s is not within the Tailscale IP range", ip)
+	}
+
+	// Get the list of network interfaces
+	ifaces, err := netImpl.Interfaces()
+	if err != nil {
+		return "", fmt.Errorf("failed to get network interfaces: %v", err)
+	}
+
+	// Find the interface with the given IP address
+	for _, iface := range ifaces {
+		// Get all addresses associated with the interface
+		addrs, err := netImpl.Addrs(iface)
+		if err != nil {
+			return "", fmt.Errorf("failed to get interface addresses: %v", err)
+		}
+
+		// Check if any of the addresses match the given IP address
+		for _, addr := range addrs {
+			// Check if the address is an IPNet
+			ipNet, ok := addr.(*net.IPNet)
+			if !ok {
+				continue
+			}
+
+			// Check if the address matches the given IP address
+			if ipNet.IP.Equal(net.ParseIP(ip)) {
+				return iface.Name, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("interface with IP address %s not found", ip)
 }
