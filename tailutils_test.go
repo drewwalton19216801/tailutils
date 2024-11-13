@@ -3,6 +3,7 @@ package tailutils
 import (
 	"errors"
 	"net"
+	"reflect"
 	"testing"
 )
 
@@ -637,5 +638,283 @@ func TestGetInterfaceName_NonIPNetAddress(t *testing.T) {
 	expectedErr := "interface with IP address 100.64.0.1 not found"
 	if err == nil || err.Error() != expectedErr {
 		t.Errorf("Expected error '%s', got %v", expectedErr, err)
+	}
+}
+
+func TestGetTailscaleIP_Public(t *testing.T) {
+	// Save the original DefaultNetwork and restore it after the test
+	originalNetwork := DefaultNetwork
+	defer func() { DefaultNetwork = originalNetwork }()
+
+	mockNet := &MockNetwork{
+		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
+			ip, ipNet, err := net.ParseCIDR(s)
+			return &ip, ipNet, err
+		},
+		InterfacesFunc: func() ([]net.Interface, error) {
+			return []net.Interface{
+				{
+					Index: 1,
+					MTU:   1500,
+					Name:  "tailscale0",
+					Flags: net.FlagUp,
+				},
+			}, nil
+		},
+		AddrsFunc: func(iface net.Interface) ([]net.Addr, error) {
+			if iface.Name == "tailscale0" {
+				ipNet := &net.IPNet{
+					IP:   net.IPv4(100, 64, 0, 1),
+					Mask: net.CIDRMask(10, 32),
+				}
+				return []net.Addr{ipNet}, nil
+			}
+			return nil, nil
+		},
+	}
+
+	DefaultNetwork = mockNet
+
+	ip, err := GetTailscaleIP()
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	expectedIP := "100.64.0.1"
+	if ip != expectedIP {
+		t.Errorf("Expected IP %s, got %s", expectedIP, ip)
+	}
+}
+
+func TestGetTailscaleIP6_Public(t *testing.T) {
+	// Save the original DefaultNetwork and restore it after the test
+	originalNetwork := DefaultNetwork
+	defer func() { DefaultNetwork = originalNetwork }()
+
+	mockNet := &MockNetwork{
+		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
+			ip, ipNet, err := net.ParseCIDR(s)
+			return &ip, ipNet, err
+		},
+		InterfacesFunc: func() ([]net.Interface, error) {
+			return []net.Interface{
+				{
+					Index: 1,
+					MTU:   1500,
+					Name:  "tailscale0",
+					Flags: net.FlagUp,
+				},
+			}, nil
+		},
+		AddrsFunc: func(iface net.Interface) ([]net.Addr, error) {
+			if iface.Name == "tailscale0" {
+				ipNet := &net.IPNet{
+					IP:   net.ParseIP("fd7a:115c:a1e0::1"),
+					Mask: net.CIDRMask(48, 128),
+				}
+				return []net.Addr{ipNet}, nil
+			}
+			return nil, nil
+		},
+	}
+
+	DefaultNetwork = mockNet
+
+	ip, err := GetTailscaleIP6()
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	expectedIP := "fd7a:115c:a1e0::1"
+	if ip != expectedIP {
+		t.Errorf("Expected IP %s, got %s", expectedIP, ip)
+	}
+}
+
+func TestHasTailscaleIP_Public(t *testing.T) {
+	// Save the original DefaultNetwork and restore it after the test
+	originalNetwork := DefaultNetwork
+	defer func() { DefaultNetwork = originalNetwork }()
+
+	mockNet := &MockNetwork{
+		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
+			ip, ipNet, _ := net.ParseCIDR(s)
+			return &ip, ipNet, nil
+		},
+		InterfacesFunc: func() ([]net.Interface, error) {
+			return []net.Interface{
+				{
+					Index: 1,
+					Name:  "tailscale0",
+					Flags: net.FlagUp,
+				},
+			}, nil
+		},
+		AddrsFunc: func(iface net.Interface) ([]net.Addr, error) {
+			if iface.Name == "tailscale0" {
+				ipNetIPv4 := &net.IPNet{
+					IP:   net.IPv4(100, 64, 0, 1),
+					Mask: net.CIDRMask(10, 32),
+				}
+				ipNetIPv6 := &net.IPNet{
+					IP:   net.ParseIP("fd7a:115c:a1e0::1"),
+					Mask: net.CIDRMask(48, 128),
+				}
+				return []net.Addr{ipNetIPv4, ipNetIPv6}, nil
+			}
+			return nil, nil
+		},
+	}
+
+	DefaultNetwork = mockNet
+
+	hasIP, err := HasTailscaleIP()
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	if !hasIP {
+		t.Errorf("Expected true, got false")
+	}
+}
+
+func TestHasTailscaleIP_NoIPs(t *testing.T) {
+	// Save the original DefaultNetwork and restore it after the test
+	originalNetwork := DefaultNetwork
+	defer func() { DefaultNetwork = originalNetwork }()
+
+	mockNet := &MockNetwork{
+		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
+			ip, ipNet, _ := net.ParseCIDR(s)
+			return &ip, ipNet, nil
+		},
+		InterfacesFunc: func() ([]net.Interface, error) {
+			return []net.Interface{}, nil
+		},
+	}
+
+	DefaultNetwork = mockNet
+
+	hasIP, err := HasTailscaleIP()
+	if err == nil {
+		t.Errorf("Expected error, got nil")
+	}
+	if hasIP {
+		t.Errorf("Expected false, got true")
+	}
+}
+
+func TestRealNetwork_ParseCIDR(t *testing.T) {
+	rn := &RealNetwork{}
+	ip, ipNet, err := rn.ParseCIDR("192.168.1.0/24")
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	expectedIP, expectedIPNet, _ := net.ParseCIDR("192.168.1.0/24")
+	if !ip.Equal(expectedIP) {
+		t.Errorf("Expected IP %v, got %v", expectedIP, ip)
+	}
+	if !reflect.DeepEqual(ipNet, expectedIPNet) {
+		t.Errorf("Expected IPNet %v, got %v", expectedIPNet, ipNet)
+	}
+}
+
+func TestRealNetwork_ParseIP(t *testing.T) {
+	rn := &RealNetwork{}
+	ip, err := rn.ParseIP("192.168.1.1")
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	expectedIP := net.ParseIP("192.168.1.1")
+	if !ip.Equal(expectedIP) {
+		t.Errorf("Expected IP %v, got %v", expectedIP, ip)
+	}
+}
+
+func TestRealNetwork_Interfaces(t *testing.T) {
+	rn := &RealNetwork{}
+	_, err := rn.Interfaces()
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	// We can't predict the interfaces, so just ensure it doesn't error
+}
+
+func TestRealNetwork_Addrs(t *testing.T) {
+	rn := &RealNetwork{}
+	ifaces, err := rn.Interfaces()
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	for _, iface := range ifaces {
+		_, err := rn.Addrs(iface)
+		if err != nil {
+			t.Errorf("Expected no error for interface %s, got %v", iface.Name, err)
+		}
+		// We can't predict the addresses, so just ensure it doesn't error
+	}
+}
+
+func TestParseIPFunc_InMockNetwork(t *testing.T) {
+	mockNet := &MockNetwork{
+		ParseIPFunc: func(s string) (*net.IP, error) {
+			ip := net.ParseIP(s)
+			if ip == nil {
+				return nil, errors.New("invalid IP")
+			}
+			return &ip, nil
+		},
+	}
+
+	ip, err := mockNet.ParseIP("192.168.1.1")
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	expectedIP := net.ParseIP("192.168.1.1")
+	if !ip.Equal(expectedIP) {
+		t.Errorf("Expected IP %v, got %v", expectedIP, ip)
+	}
+
+	_, err = mockNet.ParseIP("invalid-ip")
+	if err == nil {
+		t.Errorf("Expected error, got nil")
+	}
+}
+
+// Test hasTailscaleIP function directly
+func TestHasTailscaleIP_Direct(t *testing.T) {
+	mockNet := &MockNetwork{
+		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
+			ip, ipNet, err := net.ParseCIDR(s)
+			return &ip, ipNet, err
+		},
+		InterfacesFunc: func() ([]net.Interface, error) {
+			return nil, errors.New("Interfaces error")
+		},
+	}
+
+	hasIP, err := hasTailscaleIP(mockNet)
+	if err == nil || err.Error() != "failed to get network interfaces: Interfaces error" {
+		t.Errorf("Expected 'Interfaces error', got %v", err)
+	}
+	if hasIP {
+		t.Errorf("Expected false, got true")
+	}
+}
+
+func TestHasTailscaleIP6_Direct(t *testing.T) {
+	mockNet := &MockNetwork{
+		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
+			if s == TailscaleIP6CIDR {
+				return nil, nil, errors.New("ParseCIDR error")
+			}
+			ip, ipNet, err := net.ParseCIDR(s)
+			return &ip, ipNet, err
+		},
+	}
+
+	hasIP, err := hasTailscaleIP6(mockNet)
+	if err == nil || err.Error() != "failed to parse Tailscale IPv6 range: ParseCIDR error" {
+		t.Errorf("Expected 'ParseCIDR error', got %v", err)
+	}
+	if hasIP {
+		t.Errorf("Expected false, got true")
 	}
 }
