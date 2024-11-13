@@ -709,6 +709,139 @@ func TestGetInterfaceName_NonIPNetAddress(t *testing.T) {
 	}
 }
 
+func TestGetTailscaleIP6_DirectInterfaceFail(t *testing.T) {
+	// Save the original DefaultNetwork and restore it after the test
+	originalNetwork := DefaultNetwork
+	defer func() { DefaultNetwork = originalNetwork }()
+
+	// Create a mock network that won't list properly
+	mockNet := &MockNetwork{
+		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
+			ip, ipNet, err := net.ParseCIDR(s)
+			return &ip, ipNet, err
+		},
+		InterfacesFunc: func() ([]net.Interface, error) {
+			return nil, errors.New("Interfaces error")
+		},
+	}
+
+	ip, err := getTailscaleIP6(mockNet)
+	if err == nil || err.Error() != "failed to get network interfaces: Interfaces error" {
+		t.Errorf("Expected 'Interfaces error', got %v", err)
+	}
+	if ip != "" {
+		t.Errorf("Expected empty IP, got %s", ip)
+	}
+}
+
+func TestGetTailscaleIP6_DirectIfaceDown(t *testing.T) {
+	// Save the original DefaultNetwork and restore it after the test
+	originalNetwork := DefaultNetwork
+	defer func() { DefaultNetwork = originalNetwork }()
+
+	// Create a mock network that for some reason has a tailscale IP yet is labeled as loopback
+	mockNet := &MockNetwork{
+		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
+			ip, ipNet, err := net.ParseCIDR(s)
+			return &ip, ipNet, err
+		},
+		InterfacesFunc: func() ([]net.Interface, error) {
+			return []net.Interface{
+				{
+					Index: 1,
+					MTU:   1500,
+					Name:  "tailscale0",
+					Flags: net.FlagLoopback,
+				},
+			}, nil
+		},
+		AddrsFunc: func(iface net.Interface) ([]net.Addr, error) {
+			return []net.Addr{
+				&net.IPNet{
+					IP:   net.IPv4(100, 64, 0, 1),
+					Mask: net.CIDRMask(64, 128),
+				},
+			}, nil
+		},
+	}
+
+	ip, err := getTailscaleIP6(mockNet)
+	// Expect "tailscale IPv6 interface not found" error
+	if err == nil || err.Error() != "tailscale IPv6 interface not found" {
+		t.Errorf("Expected 'tailscale IPv6 interface not found', got %v", err)
+	}
+
+	if ip != "" {
+		t.Errorf("Expected empty IP, got %s", ip)
+	}
+}
+
+func TestGetTailscaleIP6_DirectInvalidIP(t *testing.T) {
+	// Save the original DefaultNetwork and restore it after the test
+	originalNetwork := DefaultNetwork
+	defer func() { DefaultNetwork = originalNetwork }()
+
+	// Create a mock network that will fail to get the interface IP
+	mockNet := &MockNetwork{
+		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
+			ip, ipNet, err := net.ParseCIDR(s)
+			return &ip, ipNet, err
+		},
+		InterfacesFunc: func() ([]net.Interface, error) {
+			return []net.Interface{
+				{
+					Index: 1,
+					MTU:   1500,
+					Name:  "tailscale0",
+					Flags: net.FlagUp,
+				},
+			}, nil
+		},
+		AddrsFunc: func(iface net.Interface) ([]net.Addr, error) {
+			return nil, errors.New("Addrs error")
+		},
+	}
+
+	ip, err := getTailscaleIP6(mockNet)
+	if err == nil || err.Error() != "failed to get interface addresses: Addrs error" {
+		t.Errorf("Expected 'Addrs error', got %v", err)
+	}
+	if ip != "" {
+		t.Errorf("Expected empty IP, got %s", ip)
+	}
+}
+
+func TestGetTailscaleIP6_NonIPNetAddress(t *testing.T) {
+	mockNet := &MockNetwork{
+		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
+			ip, ipNet, err := net.ParseCIDR(s)
+			return &ip, ipNet, err
+		},
+		InterfacesFunc: func() ([]net.Interface, error) {
+			return []net.Interface{
+				{
+					Index: 1,
+					MTU:   1500,
+					Name:  "eth0",
+					Flags: net.FlagUp,
+				},
+			}, nil
+		},
+		AddrsFunc: func(iface net.Interface) ([]net.Addr, error) {
+			// Return an address that is not a *net.IPNet
+			return []net.Addr{&MockAddr{}}, nil
+		},
+	}
+
+	ip, err := getTailscaleIP6(mockNet)
+	if err == nil || err.Error() != "tailscale IPv6 interface not found" {
+		t.Errorf("Expected 'tailscale IPv6 interface not found' error, got %v", err)
+	}
+	if ip != "" {
+		t.Errorf("Expected empty IP, got %s", ip)
+	}
+}
+
 func TestGetTailscaleIP_Public(t *testing.T) {
 	// Save the original DefaultNetwork and restore it after the test
 	originalNetwork := DefaultNetwork
