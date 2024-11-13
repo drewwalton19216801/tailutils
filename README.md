@@ -1,5 +1,5 @@
 # Tailutils
-![Coverage](https://img.shields.io/badge/Coverage-95.5%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-100.0%25-brightgreen)
 
 [![Go](https://github.com/drewwalton19216801/tailutils/actions/workflows/go.yml/badge.svg)](https://github.com/drewwalton19216801/tailutils/actions/workflows/go.yml)
 
