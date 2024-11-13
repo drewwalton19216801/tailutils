@@ -12,6 +12,7 @@
 - **`HasTailscaleIP`**: Checks whether the machine has an active Tailscale interface (IPv4 or IPv6).
 - **`GetTailscaleIP`**: Retrieves the IPv4 address assigned to the Tailscale interface.
 - **`GetTailscaleIP6`**: Retrieves the IPv6 address assigned to the Tailscale interface.
+- **`GetInterfaceName`**: Retrieves the name of the network interface associated with a given Tailscale IP address.
 
 These utilities are particularly useful for applications that need to:
 
@@ -68,6 +69,22 @@ func main() {
     } else {
         fmt.Printf("Tailscale IPv6 address: %s\n", ipv6)
     }
+
+    // Get the name of the network interface for a given Tailscale IP address
+    interfaceName, err := tailutils.GetInterfaceName(ipv4)
+    if err != nil {
+        log.Printf("Error getting interface name: %v", err)
+    } else {
+        fmt.Printf("Interface name: %s\n", interfaceName)
+    }
+
+    // Same thing, but for IPv6
+    interfaceName6, err := tailutils.GetInterfaceName(ipv6)
+    if err != nil {
+        log.Printf("Error getting interface name: %v", err)
+    } else {
+        fmt.Printf("Interface name: %s\n", interfaceName6)
+    }
 }
 ```
 
@@ -81,6 +98,7 @@ func main() {
 - **`func HasTailscaleIP() (bool, error)`**: Checks if the machine has an active Tailscale IP address (either IPv4 or IPv6).
 - **`func GetTailscaleIP() (string, error)`**: Retrieves the IPv4 address of the Tailscale interface.
 - **`func GetTailscaleIP6() (string, error)`**: Retrieves the IPv6 address of the Tailscale interface.
+- **`func GetInterfaceName(ip string) (string, error)`**: Retrieves the name of the network interface for the given Tailscale IP address.
 
 ## Why use `tailutils`?
 
