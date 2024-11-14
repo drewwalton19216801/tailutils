@@ -12,7 +12,7 @@ var (
 
 // Network is an interface that abstracts the network operations used in tailutils.
 type Network interface {
-	ParseCIDR(s string) (*net.IP, *net.IPNet, error)
+	ParseCIDR(s string) (*net.IPNet, error)
 	ParseIP(s string) (*net.IP, error)
 	Interfaces() ([]net.Interface, error)
 	Addrs(iface net.Interface) ([]net.Addr, error)
@@ -21,26 +21,26 @@ type Network interface {
 // RealNetwork is the real implementation of the Network interface using the net package.
 type RealNetwork struct{}
 
-func (rn *RealNetwork) ParseCIDR(s string) (*net.IP, *net.IPNet, error) {
-	ip, ipNet, err := net.ParseCIDR(s)
-	return &ip, ipNet, err
+func (rn RealNetwork) ParseCIDR(s string) (*net.IPNet, error) {
+	_, ipNet, err := net.ParseCIDR(s)
+	return ipNet, err
 }
 
-func (rn *RealNetwork) ParseIP(s string) (*net.IP, error) {
+func (rn RealNetwork) ParseIP(s string) (*net.IP, error) {
 	ip := net.ParseIP(s)
 	return &ip, nil
 }
 
-func (rn *RealNetwork) Interfaces() ([]net.Interface, error) {
+func (rn RealNetwork) Interfaces() ([]net.Interface, error) {
 	return net.Interfaces()
 }
 
-func (rn *RealNetwork) Addrs(iface net.Interface) ([]net.Addr, error) {
+func (rn RealNetwork) Addrs(iface net.Interface) ([]net.Addr, error) {
 	return iface.Addrs()
 }
 
 // DefaultNetwork is the default implementation used in production.
-var DefaultNetwork Network = &RealNetwork{}
+var DefaultNetwork Network = RealNetwork{}
 
 // GetTailscaleIP returns the IP address of the tailscale interface.
 func GetTailscaleIP() (string, error) {
@@ -49,7 +49,7 @@ func GetTailscaleIP() (string, error) {
 
 func getTailscaleIP(netImpl Network) (string, error) {
 	// Define the Tailscale IP range
-	_, tsNet, err := netImpl.ParseCIDR(TailscaleIP4CIDR)
+	tsNet, err := netImpl.ParseCIDR(TailscaleIP4CIDR)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse Tailscale IP range: %v", err)
 	}
@@ -136,7 +136,7 @@ func GetTailscaleIP6() (string, error) {
 
 func getTailscaleIP6(netImpl Network) (string, error) {
 	// Define the Tailscale IPv6 range
-	_, tsNet, err := netImpl.ParseCIDR(TailscaleIP6CIDR)
+	tsNet, err := netImpl.ParseCIDR(TailscaleIP6CIDR)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse Tailscale IPv6 range: %v", err)
 	}
@@ -192,11 +192,11 @@ func GetInterfaceName(ip string) (string, error) {
 // only for Tailscale IP ranges.
 func getInterfaceName(netImpl Network, ip string) (string, error) {
 	// Ensure the IP address given is within the Tailscale IPv4 or IPv6 range
-	_, tsNet, err := netImpl.ParseCIDR(TailscaleIP4CIDR)
+	tsNet, err := netImpl.ParseCIDR(TailscaleIP4CIDR)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse Tailscale IP range: %v", err)
 	}
-	_, tsNet6, err := netImpl.ParseCIDR(TailscaleIP6CIDR)
+	tsNet6, err := netImpl.ParseCIDR(TailscaleIP6CIDR)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse Tailscale IPv6 range: %v", err)
 	}
