@@ -9,13 +9,13 @@ import (
 
 // MockNetwork is a mock implementation of the Network interface for testing purposes.
 type MockNetwork struct {
-	ParseCIDRFunc  func(s string) (*net.IP, *net.IPNet, error)
+	ParseCIDRFunc  func(s string) (*net.IPNet, error)
 	ParseIPFunc    func(s string) (*net.IP, error)
 	InterfacesFunc func() ([]net.Interface, error)
 	AddrsFunc      func(iface net.Interface) ([]net.Addr, error)
 }
 
-func (m *MockNetwork) ParseCIDR(s string) (*net.IP, *net.IPNet, error) {
+func (m *MockNetwork) ParseCIDR(s string) (*net.IPNet, error) {
 	return m.ParseCIDRFunc(s)
 }
 
@@ -40,9 +40,9 @@ func (m *MockAddr) String() string  { return "mockaddr" }
 func TestGetTailscaleIP(t *testing.T) {
 	// Simulate successful retrieval of Tailscale IP
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -78,8 +78,8 @@ func TestGetTailscaleIP(t *testing.T) {
 
 func TestGetTailscaleIP_ParseCIDR_Error(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			return nil, nil, errors.New("ParseCIDR error")
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			return nil, errors.New("ParseCIDR error")
 		},
 	}
 
@@ -94,9 +94,9 @@ func TestGetTailscaleIP_ParseCIDR_Error(t *testing.T) {
 
 func TestGetTailscaleIP_Interfaces_Error(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, _ := net.ParseCIDR(s)
-			return &ip, ipNet, nil
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, _ := net.ParseCIDR(s)
+			return ipNet, nil
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return nil, errors.New("Interfaces error")
@@ -114,9 +114,9 @@ func TestGetTailscaleIP_Interfaces_Error(t *testing.T) {
 
 func TestGetTailscaleIP_NoInterfaces(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, _ := net.ParseCIDR(s)
-			return &ip, ipNet, nil
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, _ := net.ParseCIDR(s)
+			return ipNet, nil
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -141,9 +141,9 @@ func TestGetTailscaleIP_NoInterfaces(t *testing.T) {
 
 func TestGetTailscaleIP_Addrs_Error(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, _ := net.ParseCIDR(s)
-			return &ip, ipNet, nil
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, _ := net.ParseCIDR(s)
+			return ipNet, nil
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -171,9 +171,9 @@ func TestGetTailscaleIP_Addrs_Error(t *testing.T) {
 
 func TestGetTailscaleIP_NoMatchingIP(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, _ := net.ParseCIDR(s)
-			return &ip, ipNet, nil
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, _ := net.ParseCIDR(s)
+			return ipNet, nil
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -205,9 +205,9 @@ func TestGetTailscaleIP_NoMatchingIP(t *testing.T) {
 
 func TestGetTailscaleIP_NonIPNetAddress(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, _ := net.ParseCIDR(s)
-			return &ip, ipNet, nil
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, _ := net.ParseCIDR(s)
+			return ipNet, nil
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -235,9 +235,9 @@ func TestGetTailscaleIP_NonIPNetAddress(t *testing.T) {
 
 func TestGetTailscaleIP_IPv6Address(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, _ := net.ParseCIDR(s)
-			return &ip, ipNet, nil
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, _ := net.ParseCIDR(s)
+			return ipNet, nil
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -269,9 +269,9 @@ func TestGetTailscaleIP_IPv6Address(t *testing.T) {
 
 func TestGetTailscaleIP6(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -307,9 +307,9 @@ func TestGetTailscaleIP6(t *testing.T) {
 
 func TestHasTailscaleIP_BothIPv4IPv6(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, _ := net.ParseCIDR(s)
-			return &ip, ipNet, nil
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, _ := net.ParseCIDR(s)
+			return ipNet, nil
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -354,9 +354,9 @@ func TestHasTailscaleIP_BothIPv4IPv6(t *testing.T) {
 
 func TestHasTailscaleIP_OnlyIP4(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, _ := net.ParseCIDR(s)
-			return &ip, ipNet, nil
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, _ := net.ParseCIDR(s)
+			return ipNet, nil
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -397,9 +397,9 @@ func TestHasTailscaleIP_OnlyIP4(t *testing.T) {
 
 func TestGetInterfaceName_TailscaleIPv4(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -452,9 +452,9 @@ func TestGetInterfaceName_TailscaleIPv4(t *testing.T) {
 
 func TestGetInterfaceName_TailscaleIPv6(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -507,9 +507,9 @@ func TestGetInterfaceName_TailscaleIPv6(t *testing.T) {
 
 func TestGetInterfaceName_IPNotInTailscaleRange(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 	}
 
@@ -529,9 +529,9 @@ func TestGetInterfaceName_IPNotInTailscaleRange(t *testing.T) {
 
 func TestGetInterfaceName_IPNotFound(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -568,12 +568,12 @@ func TestGetInterfaceName_IPNotFound(t *testing.T) {
 
 func TestGetInterfaceName_ParseCIDRError(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
 			if s == TailscaleIP4CIDR {
-				return nil, nil, errors.New("ParseCIDR error")
+				return nil, errors.New("ParseCIDR error")
 			}
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 	}
 
@@ -593,12 +593,12 @@ func TestGetInterfaceName_ParseCIDRError(t *testing.T) {
 
 func TestGetInterfaceName_ParseCIDR6Error(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
 			if s == TailscaleIP6CIDR {
-				return nil, nil, errors.New("ParseCIDR error")
+				return nil, errors.New("ParseCIDR error")
 			}
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 	}
 
@@ -618,9 +618,9 @@ func TestGetInterfaceName_ParseCIDR6Error(t *testing.T) {
 
 func TestGetInterfaceName_InterfacesError(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return nil, errors.New("Interfaces error")
@@ -643,9 +643,9 @@ func TestGetInterfaceName_InterfacesError(t *testing.T) {
 
 func TestGetInterfaceName_AddrsError(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -677,9 +677,9 @@ func TestGetInterfaceName_AddrsError(t *testing.T) {
 
 func TestGetInterfaceName_NonIPNetAddress(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -716,9 +716,9 @@ func TestGetTailscaleIP6_DirectInterfaceFail(t *testing.T) {
 
 	// Create a mock network that won't list properly
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return nil, errors.New("Interfaces error")
@@ -741,9 +741,9 @@ func TestGetTailscaleIP6_DirectIfaceDown(t *testing.T) {
 
 	// Create a mock network that for some reason has a tailscale IP yet is labeled as loopback
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -783,9 +783,9 @@ func TestGetTailscaleIP6_DirectInvalidIP(t *testing.T) {
 
 	// Create a mock network that will fail to get the interface IP
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -813,9 +813,9 @@ func TestGetTailscaleIP6_DirectInvalidIP(t *testing.T) {
 
 func TestGetTailscaleIP6_NonIPNetAddress(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -848,9 +848,9 @@ func TestGetTailscaleIP_Public(t *testing.T) {
 	defer func() { DefaultNetwork = originalNetwork }()
 
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -892,9 +892,9 @@ func TestGetTailscaleIP6_Public(t *testing.T) {
 	defer func() { DefaultNetwork = originalNetwork }()
 
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -936,9 +936,9 @@ func TestGetTailscaleIP6_Errors(t *testing.T) {
 	defer func() { DefaultNetwork = originalNetwork }()
 
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -970,9 +970,9 @@ func TestHasTailscaleIP_Public(t *testing.T) {
 	defer func() { DefaultNetwork = originalNetwork }()
 
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, _ := net.ParseCIDR(s)
-			return &ip, ipNet, nil
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, _ := net.ParseCIDR(s)
+			return ipNet, nil
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{
@@ -1016,9 +1016,9 @@ func TestHasTailscaleIP_NoIPs(t *testing.T) {
 	defer func() { DefaultNetwork = originalNetwork }()
 
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, _ := net.ParseCIDR(s)
-			return &ip, ipNet, nil
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, _ := net.ParseCIDR(s)
+			return ipNet, nil
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return []net.Interface{}, nil
@@ -1038,13 +1038,13 @@ func TestHasTailscaleIP_NoIPs(t *testing.T) {
 
 func TestRealNetwork_ParseCIDR(t *testing.T) {
 	rn := &RealNetwork{}
-	ip, ipNet, err := rn.ParseCIDR("192.168.1.0/24")
+	ipNet, err := rn.ParseCIDR("192.168.1.0/24")
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
 	expectedIP, expectedIPNet, _ := net.ParseCIDR("192.168.1.0/24")
-	if !ip.Equal(expectedIP) {
-		t.Errorf("Expected IP %v, got %v", expectedIP, ip)
+	if !ipNet.IP.Equal(expectedIP) {
+		t.Errorf("Expected IP %v, got %v", expectedIP, ipNet.IP)
 	}
 	if !reflect.DeepEqual(ipNet, expectedIPNet) {
 		t.Errorf("Expected IPNet %v, got %v", expectedIPNet, ipNet)
@@ -1116,9 +1116,9 @@ func TestParseIPFunc_InMockNetwork(t *testing.T) {
 // Test hasTailscaleIP function directly
 func TestHasTailscaleIP_Direct(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 		InterfacesFunc: func() ([]net.Interface, error) {
 			return nil, errors.New("Interfaces error")
@@ -1136,12 +1136,12 @@ func TestHasTailscaleIP_Direct(t *testing.T) {
 
 func TestHasTailscaleIP6_Direct(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IP, *net.IPNet, error) {
+		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
 			if s == TailscaleIP6CIDR {
-				return nil, nil, errors.New("ParseCIDR error")
+				return nil, errors.New("ParseCIDR error")
 			}
-			ip, ipNet, err := net.ParseCIDR(s)
-			return &ip, ipNet, err
+			_, ipNet, err := net.ParseCIDR(s)
+			return ipNet, err
 		},
 	}
 
