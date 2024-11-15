@@ -38,41 +38,192 @@ func (m *MockAddr) Network() string { return "mock" }
 func (m *MockAddr) String() string  { return "mockaddr" }
 
 func TestGetTailscaleIP(t *testing.T) {
-	// Simulate successful retrieval of Tailscale IP
-	mockNet := &MockNetwork{
-		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
-			_, ipNet, err := net.ParseCIDR(s)
-			return ipNet, err
-		},
-		InterfacesFunc: func() ([]net.Interface, error) {
-			return []net.Interface{
-				{
-					Index: 1,
-					MTU:   1500,
-					Name:  "tailscale0",
-					Flags: net.FlagUp,
-				},
-			}, nil
-		},
-		AddrsFunc: func(iface net.Interface) ([]net.Addr, error) {
-			if iface.Name == "tailscale0" {
-				ipNet := &net.IPNet{
-					IP:   net.IPv4(100, 64, 0, 1),
+	// Define test cases covering IPv4, IPv6, and mismatched IP versions
+	testCases := []struct {
+		name           string
+		cidr           string
+		ipv6           bool
+		interfaceFlags net.Flags
+		interfaceName  string
+		addresses      []net.Addr
+		expectedIP     string
+		expectError    bool
+		errorMessage   string
+	}{
+		{
+			name:           "Valid IPv4 Tailscale IP",
+			cidr:           tailscaleIP4CIDR,
+			ipv6:           false,
+			interfaceFlags: net.FlagUp,
+			interfaceName:  "tailscale0",
+			addresses: []net.Addr{
+				&net.IPNet{
+					IP:   net.ParseIP("100.64.12.34"),
 					Mask: net.CIDRMask(10, 32),
-				}
-				return []net.Addr{ipNet}, nil
-			}
-			return nil, nil
+				},
+			},
+			expectedIP:   "100.64.12.34",
+			expectError:  false,
+			errorMessage: "",
+		},
+		{
+			name:           "Valid IPv6 Tailscale IP",
+			cidr:           tailscaleIP6CIDR,
+			ipv6:           true,
+			interfaceFlags: net.FlagUp,
+			interfaceName:  "tailscale0",
+			addresses: []net.Addr{
+				&net.IPNet{
+					IP:   net.ParseIP("fd7a:115c:a1e0::1234"),
+					Mask: net.CIDRMask(48, 128),
+				},
+			},
+			expectedIP:   "fd7a:115c:a1e0::1234",
+			expectError:  false,
+			errorMessage: "",
+		},
+		{
+			name:           "CIDR is IPv4 but interface has IPv6 address",
+			cidr:           tailscaleIP4CIDR,
+			ipv6:           false,
+			interfaceFlags: net.FlagUp,
+			interfaceName:  "tailscale0",
+			addresses: []net.Addr{
+				&net.IPNet{
+					IP:   net.ParseIP("fd7a:115c:a1e0::1234"),
+					Mask: net.CIDRMask(48, 128),
+				},
+			},
+			expectedIP:   "",
+			expectError:  true,
+			errorMessage: "tailscale interface not found",
+		},
+		{
+			name:           "CIDR is IPv6 but interface has IPv4 address",
+			cidr:           tailscaleIP6CIDR,
+			ipv6:           true,
+			interfaceFlags: net.FlagUp,
+			interfaceName:  "tailscale0",
+			addresses: []net.Addr{
+				&net.IPNet{
+					IP:   net.ParseIP("100.64.12.34"),
+					Mask: net.CIDRMask(10, 32),
+				},
+			},
+			expectedIP:   "",
+			expectError:  true,
+			errorMessage: "tailscale interface not found",
+		},
+		{
+			name:           "Multiple Addresses with One Valid IPv4",
+			cidr:           tailscaleIP4CIDR,
+			ipv6:           false,
+			interfaceFlags: net.FlagUp,
+			interfaceName:  "tailscale0",
+			addresses: []net.Addr{
+				&net.IPNet{
+					IP:   net.ParseIP("192.168.1.1"),
+					Mask: net.CIDRMask(24, 32),
+				},
+				&net.IPNet{
+					IP:   net.ParseIP("100.64.12.34"),
+					Mask: net.CIDRMask(10, 32),
+				},
+			},
+			expectedIP:   "100.64.12.34",
+			expectError:  false,
+			errorMessage: "",
+		},
+		{
+			name:           "Multiple Addresses with No Valid IPv4",
+			cidr:           tailscaleIP4CIDR,
+			ipv6:           false,
+			interfaceFlags: net.FlagUp,
+			interfaceName:  "tailscale0",
+			addresses: []net.Addr{
+				&net.IPNet{
+					IP:   net.ParseIP("192.168.1.1"),
+					Mask: net.CIDRMask(24, 32),
+				},
+				&net.IPNet{
+					IP:   net.ParseIP("10.0.0.1"),
+					Mask: net.CIDRMask(8, 32),
+				},
+			},
+			expectedIP:   "",
+			expectError:  true,
+			errorMessage: "tailscale interface not found",
+		},
+		{
+			name:           "Interface is Down",
+			cidr:           tailscaleIP4CIDR,
+			ipv6:           false,
+			interfaceFlags: net.FlagUp &^ 0, // Interface is down
+			interfaceName:  "tailscale0",
+			addresses:      []net.Addr{},
+			expectedIP:     "",
+			expectError:    true,
+			errorMessage:   "tailscale interface not found",
+		},
+		{
+			name:           "Interface is Loopback",
+			cidr:           tailscaleIP4CIDR,
+			ipv6:           false,
+			interfaceFlags: net.FlagLoopback | net.FlagUp,
+			interfaceName:  "lo0",
+			addresses: []net.Addr{
+				&net.IPNet{
+					IP:   net.ParseIP("127.0.0.1"),
+					Mask: net.CIDRMask(8, 32),
+				},
+			},
+			expectedIP:   "",
+			expectError:  true,
+			errorMessage: "tailscale interface not found",
 		},
 	}
 
-	ip, err := getTailscaleIP(mockNet)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-	expectedIP := "100.64.0.1"
-	if ip != expectedIP {
-		t.Errorf("Expected IP %s, got %s", expectedIP, ip)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockNet := &MockNetwork{
+				ParseCIDRFunc: func(s string) (*net.IPNet, error) {
+					_, ipNet, err := net.ParseCIDR(s)
+					return ipNet, err
+				},
+				InterfacesFunc: func() ([]net.Interface, error) {
+					return []net.Interface{
+						{
+							Index: 1,
+							Flags: tc.interfaceFlags,
+							Name:  tc.interfaceName,
+						},
+					}, nil
+				},
+				AddrsFunc: func(iface net.Interface) ([]net.Addr, error) {
+					if iface.Name == tc.interfaceName {
+						return tc.addresses, nil
+					}
+					return nil, nil
+				},
+			}
+
+			ip, err := getTailscaleIP(mockNet, tc.cidr)
+			if tc.expectError {
+				if err == nil {
+					t.Fatalf("Expected error '%s' but got nil", tc.errorMessage)
+				}
+				if err.Error() != tc.errorMessage {
+					t.Errorf("Expected error message '%s', got '%s'", tc.errorMessage, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("Did not expect an error, but got: %v", err)
+				}
+				if ip != tc.expectedIP {
+					t.Errorf("Expected IP '%s', got '%s'", tc.expectedIP, ip)
+				}
+			}
+		})
 	}
 }
 
@@ -83,7 +234,7 @@ func TestGetTailscaleIP_ParseCIDR_Error(t *testing.T) {
 		},
 	}
 
-	ip, err := getTailscaleIP(mockNet)
+	ip, err := getTailscaleIP(mockNet, tailscaleIP4CIDR)
 	if err == nil {
 		t.Errorf("Expected error, got nil")
 	}
@@ -103,7 +254,7 @@ func TestGetTailscaleIP_Interfaces_Error(t *testing.T) {
 		},
 	}
 
-	ip, err := getTailscaleIP(mockNet)
+	ip, err := getTailscaleIP(mockNet, tailscaleIP4CIDR)
 	if err == nil {
 		t.Errorf("Expected error, got nil")
 	}
@@ -130,7 +281,7 @@ func TestGetTailscaleIP_NoInterfaces(t *testing.T) {
 		},
 	}
 
-	ip, err := getTailscaleIP(mockNet)
+	ip, err := getTailscaleIP(mockNet, tailscaleIP4CIDR)
 	if err == nil || err.Error() != "tailscale interface not found" {
 		t.Errorf("Expected 'tailscale interface not found' error, got %v", err)
 	}
@@ -160,7 +311,7 @@ func TestGetTailscaleIP_Addrs_Error(t *testing.T) {
 		},
 	}
 
-	ip, err := getTailscaleIP(mockNet)
+	ip, err := getTailscaleIP(mockNet, tailscaleIP4CIDR)
 	if err == nil || err.Error() != "failed to get interface addresses: Addrs error" {
 		t.Errorf("Expected 'Addrs error', got %v", err)
 	}
@@ -194,7 +345,7 @@ func TestGetTailscaleIP_NoMatchingIP(t *testing.T) {
 		},
 	}
 
-	ip, err := getTailscaleIP(mockNet)
+	ip, err := getTailscaleIP(mockNet, tailscaleIP4CIDR)
 	if err == nil || err.Error() != "tailscale interface not found" {
 		t.Errorf("Expected 'tailscale interface not found' error, got %v", err)
 	}
@@ -224,7 +375,7 @@ func TestGetTailscaleIP_NonIPNetAddress(t *testing.T) {
 		},
 	}
 
-	ip, err := getTailscaleIP(mockNet)
+	ip, err := getTailscaleIP(mockNet, tailscaleIP4CIDR)
 	if err == nil || err.Error() != "tailscale interface not found" {
 		t.Errorf("Expected 'tailscale interface not found' error, got %v", err)
 	}
@@ -258,12 +409,12 @@ func TestGetTailscaleIP_IPv6Address(t *testing.T) {
 		},
 	}
 
-	ip, err := getTailscaleIP(mockNet)
-	if err == nil || err.Error() != "tailscale interface not found" {
-		t.Errorf("Expected 'tailscale interface not found' error, got %v", err)
+	ip, err := getTailscaleIP(mockNet, tailscaleIP6CIDR)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
 	}
-	if ip != "" {
-		t.Errorf("Expected empty IP, got %s", ip)
+	if ip != "fd7a:115c:a1e0::1" {
+		t.Errorf("Expected 'fd7a:115c:a1e0::1', got %s", ip)
 	}
 }
 
@@ -295,7 +446,7 @@ func TestGetTailscaleIP6(t *testing.T) {
 		},
 	}
 
-	ip, err := getTailscaleIP6(mockNet)
+	ip, err := getTailscaleIP(mockNet, tailscaleIP6CIDR)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -387,8 +538,8 @@ func TestHasTailscaleIP_OnlyIP4(t *testing.T) {
 	}()
 
 	hasIP, err := HasTailscaleIP()
-	if err == nil || err.Error() != "tailscale IPv6 interface not found" {
-		t.Errorf("Expected 'tailscale IPv6 interface not found' error, got %v", err)
+	if err == nil || err.Error() != "tailscale interface not found" {
+		t.Errorf("Expected 'tailscale interface not found' error, got %v", err)
 	}
 	if hasIP {
 		t.Errorf("Expected false, got true")
@@ -569,7 +720,7 @@ func TestGetInterfaceName_IPNotFound(t *testing.T) {
 func TestGetInterfaceName_ParseCIDRError(t *testing.T) {
 	mockNet := &MockNetwork{
 		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
-			if s == TailscaleIP4CIDR {
+			if s == tailscaleIP4CIDR {
 				return nil, errors.New("ParseCIDR error")
 			}
 			_, ipNet, err := net.ParseCIDR(s)
@@ -594,7 +745,7 @@ func TestGetInterfaceName_ParseCIDRError(t *testing.T) {
 func TestGetInterfaceName_ParseCIDR6Error(t *testing.T) {
 	mockNet := &MockNetwork{
 		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
-			if s == TailscaleIP6CIDR {
+			if s == tailscaleIP6CIDR {
 				return nil, errors.New("ParseCIDR error")
 			}
 			_, ipNet, err := net.ParseCIDR(s)
@@ -725,7 +876,7 @@ func TestGetTailscaleIP6_DirectInterfaceFail(t *testing.T) {
 		},
 	}
 
-	ip, err := getTailscaleIP6(mockNet)
+	ip, err := getTailscaleIP(mockNet, tailscaleIP6CIDR)
 	if err == nil || err.Error() != "failed to get network interfaces: Interfaces error" {
 		t.Errorf("Expected 'Interfaces error', got %v", err)
 	}
@@ -765,10 +916,10 @@ func TestGetTailscaleIP6_DirectIfaceDown(t *testing.T) {
 		},
 	}
 
-	ip, err := getTailscaleIP6(mockNet)
-	// Expect "tailscale IPv6 interface not found" error
-	if err == nil || err.Error() != "tailscale IPv6 interface not found" {
-		t.Errorf("Expected 'tailscale IPv6 interface not found', got %v", err)
+	ip, err := getTailscaleIP(mockNet, tailscaleIP6CIDR)
+	// Expect "tailscale interface not found" error
+	if err == nil || err.Error() != "tailscale interface not found" {
+		t.Errorf("Expected 'tailscale interface not found', got %v", err)
 	}
 
 	if ip != "" {
@@ -802,7 +953,7 @@ func TestGetTailscaleIP6_DirectInvalidIP(t *testing.T) {
 		},
 	}
 
-	ip, err := getTailscaleIP6(mockNet)
+	ip, err := getTailscaleIP(mockNet, tailscaleIP6CIDR)
 	if err == nil || err.Error() != "failed to get interface addresses: Addrs error" {
 		t.Errorf("Expected 'Addrs error', got %v", err)
 	}
@@ -833,9 +984,9 @@ func TestGetTailscaleIP6_NonIPNetAddress(t *testing.T) {
 		},
 	}
 
-	ip, err := getTailscaleIP6(mockNet)
-	if err == nil || err.Error() != "tailscale IPv6 interface not found" {
-		t.Errorf("Expected 'tailscale IPv6 interface not found' error, got %v", err)
+	ip, err := getTailscaleIP(mockNet, tailscaleIP6CIDR)
+	if err == nil || err.Error() != "tailscale interface not found" {
+		t.Errorf("Expected 'tailscale interface not found' error, got %v", err)
 	}
 	if ip != "" {
 		t.Errorf("Expected empty IP, got %s", ip)
@@ -958,7 +1109,7 @@ func TestGetTailscaleIP6_Errors(t *testing.T) {
 	DefaultNetwork = mockNet
 
 	_, err := GetTailscaleIP6()
-	expectedErr := "tailscale IPv6 interface not found"
+	expectedErr := "tailscale interface not found"
 	if err == nil || err.Error() != expectedErr {
 		t.Errorf("Expected error '%s', got %v", expectedErr, err)
 	}
@@ -1063,6 +1214,14 @@ func TestRealNetwork_ParseIP(t *testing.T) {
 	}
 }
 
+func TestRealNetwork_ParseIPInvalidIP(t *testing.T) {
+	rn := &RealNetwork{}
+	_, err := rn.ParseIP("192.168.1")
+	if err == nil {
+		t.Errorf("Expected error, got nil")
+	}
+}
+
 func TestRealNetwork_Interfaces(t *testing.T) {
 	rn := &RealNetwork{}
 	_, err := rn.Interfaces()
@@ -1137,7 +1296,7 @@ func TestHasTailscaleIP_Direct(t *testing.T) {
 func TestHasTailscaleIP6_Direct(t *testing.T) {
 	mockNet := &MockNetwork{
 		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
-			if s == TailscaleIP6CIDR {
+			if s == tailscaleIP6CIDR {
 				return nil, errors.New("ParseCIDR error")
 			}
 			_, ipNet, err := net.ParseCIDR(s)
@@ -1146,8 +1305,9 @@ func TestHasTailscaleIP6_Direct(t *testing.T) {
 	}
 
 	hasIP, err := hasTailscaleIP6(mockNet)
-	if err == nil || err.Error() != "failed to parse Tailscale IPv6 range: ParseCIDR error" {
-		t.Errorf("Expected 'ParseCIDR error', got %v", err)
+	// We're expecting a ParseCIDR error here
+	if err == nil || err.Error() != "failed to parse Tailscale IP range: ParseCIDR error" {
+		t.Errorf("Expected 'failed to parse Tailscale IP range: ParseCIDR error', got %v", err)
 	}
 	if hasIP {
 		t.Errorf("Expected false, got true")

@@ -6,8 +6,8 @@ import (
 )
 
 var (
-	TailscaleIP4CIDR = "100.64.0.0/10"
-	TailscaleIP6CIDR = "fd7a:115c:a1e0::/48"
+	tailscaleIP4CIDR = "100.64.0.0/10"
+	tailscaleIP6CIDR = "fd7a:115c:a1e0::/48"
 )
 
 // Network is an interface that abstracts the network operations used in tailutils.
@@ -28,6 +28,9 @@ func (rn RealNetwork) ParseCIDR(s string) (*net.IPNet, error) {
 
 func (rn RealNetwork) ParseIP(s string) (net.IP, error) {
 	ip := net.ParseIP(s)
+	if ip == nil {
+		return nil, fmt.Errorf("invalid IP: %s", s)
+	}
 	return ip, nil
 }
 
@@ -44,12 +47,23 @@ var DefaultNetwork Network = RealNetwork{}
 
 // GetTailscaleIP returns the IP address of the tailscale interface.
 func GetTailscaleIP() (string, error) {
-	return getTailscaleIP(DefaultNetwork)
+	return getTailscaleIP(DefaultNetwork, tailscaleIP4CIDR)
 }
 
-func getTailscaleIP(netImpl Network) (string, error) {
+// GetTailscaleIP6 returns the IPv6 address of the Tailscale interface.
+func GetTailscaleIP6() (string, error) {
+	return getTailscaleIP(DefaultNetwork, tailscaleIP6CIDR)
+}
+
+func getTailscaleIP(netImpl Network, cidr string) (string, error) {
+	// Check if the cidr string is ipv4 or ipv6
+	ipv6 := false
+	if cidr == tailscaleIP6CIDR {
+		ipv6 = true
+	}
+
 	// Define the Tailscale IP range
-	tsNet, err := netImpl.ParseCIDR(TailscaleIP4CIDR)
+	tsNet, err := netImpl.ParseCIDR(cidr)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse Tailscale IP range: %v", err)
 	}
@@ -81,8 +95,11 @@ func getTailscaleIP(netImpl Network) (string, error) {
 				continue
 			}
 
-			// Consider only IPv4 addresses
-			if ipNet.IP.To4() == nil {
+			// Check if the address is an IPv4 or IPv6 address
+			if ipv6 && ipNet.IP.To4() != nil {
+				continue
+			}
+			if !ipv6 && ipNet.IP.To4() == nil {
 				continue
 			}
 
@@ -114,7 +131,7 @@ func HasTailscaleIP() (bool, error) {
 }
 
 func hasTailscaleIP(netImpl Network) (bool, error) {
-	_, err := getTailscaleIP(netImpl)
+	_, err := getTailscaleIP(netImpl, tailscaleIP4CIDR)
 	if err != nil {
 		return false, err
 	}
@@ -122,65 +139,11 @@ func hasTailscaleIP(netImpl Network) (bool, error) {
 }
 
 func hasTailscaleIP6(netImpl Network) (bool, error) {
-	_, err := getTailscaleIP6(netImpl)
+	_, err := getTailscaleIP(netImpl, tailscaleIP6CIDR)
 	if err != nil {
 		return false, err
 	}
 	return true, nil
-}
-
-// GetTailscaleIP6 returns the IPv6 address of the Tailscale interface.
-func GetTailscaleIP6() (string, error) {
-	return getTailscaleIP6(DefaultNetwork)
-}
-
-func getTailscaleIP6(netImpl Network) (string, error) {
-	// Define the Tailscale IPv6 range
-	tsNet, err := netImpl.ParseCIDR(TailscaleIP6CIDR)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse Tailscale IPv6 range: %v", err)
-	}
-
-	// Get the list of network interfaces
-	ifaces, err := netImpl.Interfaces()
-	if err != nil {
-		return "", fmt.Errorf("failed to get network interfaces: %v", err)
-	}
-
-	// Find the Tailscale interface
-	for _, iface := range ifaces {
-		// Skip interfaces that are down or are loopback interfaces
-		if (iface.Flags&net.FlagUp == 0) || (iface.Flags&net.FlagLoopback != 0) {
-			continue
-		}
-
-		// Get all addresses associated with the interface
-		addrs, err := netImpl.Addrs(iface)
-		if err != nil {
-			return "", fmt.Errorf("failed to get interface addresses: %v", err)
-		}
-
-		// Check if any of the addresses belong to the Tailscale IPv6 range
-		for _, addr := range addrs {
-			// Check if the address is an IPNet
-			ipNet, ok := addr.(*net.IPNet)
-			if !ok {
-				continue
-			}
-
-			// Consider only IPv6 addresses
-			if ipNet.IP.To4() != nil {
-				continue
-			}
-
-			// Check if the address is within the Tailscale IPv6 network
-			if tsNet.Contains(ipNet.IP) {
-				return ipNet.IP.String(), nil
-			}
-		}
-	}
-
-	return "", fmt.Errorf("tailscale IPv6 interface not found")
 }
 
 // GetInterfaceName returns the name of the network interface for the given IP address
@@ -192,11 +155,11 @@ func GetInterfaceName(ip string) (string, error) {
 // only for Tailscale IP ranges.
 func getInterfaceName(netImpl Network, ip string) (string, error) {
 	// Ensure the IP address given is within the Tailscale IPv4 or IPv6 range
-	tsNet, err := netImpl.ParseCIDR(TailscaleIP4CIDR)
+	tsNet, err := netImpl.ParseCIDR(tailscaleIP4CIDR)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse Tailscale IP range: %v", err)
 	}
-	tsNet6, err := netImpl.ParseCIDR(TailscaleIP6CIDR)
+	tsNet6, err := netImpl.ParseCIDR(tailscaleIP6CIDR)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse Tailscale IPv6 range: %v", err)
 	}
