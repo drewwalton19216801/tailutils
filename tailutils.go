@@ -28,6 +28,9 @@ func (rn RealNetwork) ParseCIDR(s string) (*net.IPNet, error) {
 
 func (rn RealNetwork) ParseIP(s string) (net.IP, error) {
 	ip := net.ParseIP(s)
+	if ip == nil {
+		return nil, fmt.Errorf("invalid IP: %s", s)
+	}
 	return ip, nil
 }
 
