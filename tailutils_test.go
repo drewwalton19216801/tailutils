@@ -10,7 +10,7 @@ import (
 // MockNetwork is a mock implementation of the Network interface for testing purposes.
 type MockNetwork struct {
 	ParseCIDRFunc  func(s string) (*net.IPNet, error)
-	ParseIPFunc    func(s string) (*net.IP, error)
+	ParseIPFunc    func(s string) (net.IP, error)
 	InterfacesFunc func() ([]net.Interface, error)
 	AddrsFunc      func(iface net.Interface) ([]net.Addr, error)
 }
@@ -19,7 +19,7 @@ func (m *MockNetwork) ParseCIDR(s string) (*net.IPNet, error) {
 	return m.ParseCIDRFunc(s)
 }
 
-func (m *MockNetwork) ParseIP(s string) (*net.IP, error) {
+func (m *MockNetwork) ParseIP(s string) (net.IP, error) {
 	return m.ParseIPFunc(s)
 }
 
@@ -1089,12 +1089,12 @@ func TestRealNetwork_Addrs(t *testing.T) {
 
 func TestParseIPFunc_InMockNetwork(t *testing.T) {
 	mockNet := &MockNetwork{
-		ParseIPFunc: func(s string) (*net.IP, error) {
+		ParseIPFunc: func(s string) (net.IP, error) {
 			ip := net.ParseIP(s)
 			if ip == nil {
 				return nil, errors.New("invalid IP")
 			}
-			return &ip, nil
+			return ip, nil
 		},
 	}
 
