@@ -158,7 +158,7 @@ func TestGetTailscaleIP(t *testing.T) {
 			name:           "Interface is Down",
 			cidr:           tailscaleIP4CIDR,
 			ipv6:           false,
-			interfaceFlags: net.FlagUp &^ net.FlagUp, // Interface is down
+			interfaceFlags: net.FlagUp &^ 0, // Interface is down
 			interfaceName:  "tailscale0",
 			addresses:      []net.Addr{},
 			expectedIP:     "",
