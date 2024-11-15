@@ -488,10 +488,10 @@ func TestHasTailscaleIP_BothIPv4IPv6(t *testing.T) {
 		},
 	}
 
-	oldDefaultNetwork := DefaultNetwork
-	DefaultNetwork = mockNet
+	oldDefaultNetwork := defaultNetwork
+	defaultNetwork = mockNet
 	defer func() {
-		DefaultNetwork = oldDefaultNetwork
+		defaultNetwork = oldDefaultNetwork
 	}()
 
 	hasIP, err := HasTailscaleIP()
@@ -531,10 +531,10 @@ func TestHasTailscaleIP_OnlyIP4(t *testing.T) {
 		},
 	}
 
-	oldDefaultNetwork := DefaultNetwork
-	DefaultNetwork = mockNet
+	oldDefaultNetwork := defaultNetwork
+	defaultNetwork = mockNet
 	defer func() {
-		DefaultNetwork = oldDefaultNetwork
+		defaultNetwork = oldDefaultNetwork
 	}()
 
 	hasIP, err := HasTailscaleIP()
@@ -586,10 +586,10 @@ func TestGetInterfaceName_TailscaleIPv4(t *testing.T) {
 		},
 	}
 
-	oldDefaultNetwork := DefaultNetwork
-	DefaultNetwork = mockNet
+	oldDefaultNetwork := defaultNetwork
+	defaultNetwork = mockNet
 	defer func() {
-		DefaultNetwork = oldDefaultNetwork
+		defaultNetwork = oldDefaultNetwork
 	}()
 
 	ifaceName, err := GetInterfaceName("100.64.0.1")
@@ -641,10 +641,10 @@ func TestGetInterfaceName_TailscaleIPv6(t *testing.T) {
 		},
 	}
 
-	oldDefaultNetwork := DefaultNetwork
-	DefaultNetwork = mockNet
+	oldDefaultNetwork := defaultNetwork
+	defaultNetwork = mockNet
 	defer func() {
-		DefaultNetwork = oldDefaultNetwork
+		defaultNetwork = oldDefaultNetwork
 	}()
 
 	ifaceName, err := GetInterfaceName("fd7a:115c:a1e0::1")
@@ -664,10 +664,10 @@ func TestGetInterfaceName_IPNotInTailscaleRange(t *testing.T) {
 		},
 	}
 
-	oldDefaultNetwork := DefaultNetwork
-	DefaultNetwork = mockNet
+	oldDefaultNetwork := defaultNetwork
+	defaultNetwork = mockNet
 	defer func() {
-		DefaultNetwork = oldDefaultNetwork
+		defaultNetwork = oldDefaultNetwork
 	}()
 
 	ip := "192.168.1.10"
@@ -703,10 +703,10 @@ func TestGetInterfaceName_IPNotFound(t *testing.T) {
 		},
 	}
 
-	oldDefaultNetwork := DefaultNetwork
-	DefaultNetwork = mockNet
+	oldDefaultNetwork := defaultNetwork
+	defaultNetwork = mockNet
 	defer func() {
-		DefaultNetwork = oldDefaultNetwork
+		defaultNetwork = oldDefaultNetwork
 	}()
 
 	ip := "100.64.0.3"
@@ -728,10 +728,10 @@ func TestGetInterfaceName_ParseCIDRError(t *testing.T) {
 		},
 	}
 
-	oldDefaultNetwork := DefaultNetwork
-	DefaultNetwork = mockNet
+	oldDefaultNetwork := defaultNetwork
+	defaultNetwork = mockNet
 	defer func() {
-		DefaultNetwork = oldDefaultNetwork
+		defaultNetwork = oldDefaultNetwork
 	}()
 
 	ip := "100.64.0.1"
@@ -753,10 +753,10 @@ func TestGetInterfaceName_ParseCIDR6Error(t *testing.T) {
 		},
 	}
 
-	oldDefaultNetwork := DefaultNetwork
-	DefaultNetwork = mockNet
+	oldDefaultNetwork := defaultNetwork
+	defaultNetwork = mockNet
 	defer func() {
-		DefaultNetwork = oldDefaultNetwork
+		defaultNetwork = oldDefaultNetwork
 	}()
 
 	ip := "100.64.0.1"
@@ -778,10 +778,10 @@ func TestGetInterfaceName_InterfacesError(t *testing.T) {
 		},
 	}
 
-	oldDefaultNetwork := DefaultNetwork
-	DefaultNetwork = mockNet
+	oldDefaultNetwork := defaultNetwork
+	defaultNetwork = mockNet
 	defer func() {
-		DefaultNetwork = oldDefaultNetwork
+		defaultNetwork = oldDefaultNetwork
 	}()
 
 	ip := "100.64.0.1"
@@ -812,10 +812,10 @@ func TestGetInterfaceName_AddrsError(t *testing.T) {
 		},
 	}
 
-	oldDefaultNetwork := DefaultNetwork
-	DefaultNetwork = mockNet
+	oldDefaultNetwork := defaultNetwork
+	defaultNetwork = mockNet
 	defer func() {
-		DefaultNetwork = oldDefaultNetwork
+		defaultNetwork = oldDefaultNetwork
 	}()
 
 	ip := "100.64.0.1"
@@ -846,10 +846,10 @@ func TestGetInterfaceName_NonIPNetAddress(t *testing.T) {
 		},
 	}
 
-	oldDefaultNetwork := DefaultNetwork
-	DefaultNetwork = mockNet
+	oldDefaultNetwork := defaultNetwork
+	defaultNetwork = mockNet
 	defer func() {
-		DefaultNetwork = oldDefaultNetwork
+		defaultNetwork = oldDefaultNetwork
 	}()
 
 	ip := "100.64.0.1"
@@ -861,9 +861,9 @@ func TestGetInterfaceName_NonIPNetAddress(t *testing.T) {
 }
 
 func TestGetTailscaleIP6_DirectInterfaceFail(t *testing.T) {
-	// Save the original DefaultNetwork and restore it after the test
-	originalNetwork := DefaultNetwork
-	defer func() { DefaultNetwork = originalNetwork }()
+	// Save the original defaultNetwork and restore it after the test
+	originalNetwork := defaultNetwork
+	defer func() { defaultNetwork = originalNetwork }()
 
 	// Create a mock network that won't list properly
 	mockNet := &MockNetwork{
@@ -886,9 +886,9 @@ func TestGetTailscaleIP6_DirectInterfaceFail(t *testing.T) {
 }
 
 func TestGetTailscaleIP6_DirectIfaceDown(t *testing.T) {
-	// Save the original DefaultNetwork and restore it after the test
-	originalNetwork := DefaultNetwork
-	defer func() { DefaultNetwork = originalNetwork }()
+	// Save the original defaultNetwork and restore it after the test
+	originalNetwork := defaultNetwork
+	defer func() { defaultNetwork = originalNetwork }()
 
 	// Create a mock network that for some reason has a tailscale IP yet is labeled as loopback
 	mockNet := &MockNetwork{
@@ -928,9 +928,9 @@ func TestGetTailscaleIP6_DirectIfaceDown(t *testing.T) {
 }
 
 func TestGetTailscaleIP6_DirectInvalidIP(t *testing.T) {
-	// Save the original DefaultNetwork and restore it after the test
-	originalNetwork := DefaultNetwork
-	defer func() { DefaultNetwork = originalNetwork }()
+	// Save the original defaultNetwork and restore it after the test
+	originalNetwork := defaultNetwork
+	defer func() { defaultNetwork = originalNetwork }()
 
 	// Create a mock network that will fail to get the interface IP
 	mockNet := &MockNetwork{
@@ -994,9 +994,9 @@ func TestGetTailscaleIP6_NonIPNetAddress(t *testing.T) {
 }
 
 func TestGetTailscaleIP_Public(t *testing.T) {
-	// Save the original DefaultNetwork and restore it after the test
-	originalNetwork := DefaultNetwork
-	defer func() { DefaultNetwork = originalNetwork }()
+	// Save the original defaultNetwork and restore it after the test
+	originalNetwork := defaultNetwork
+	defer func() { defaultNetwork = originalNetwork }()
 
 	mockNet := &MockNetwork{
 		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
@@ -1025,7 +1025,7 @@ func TestGetTailscaleIP_Public(t *testing.T) {
 		},
 	}
 
-	DefaultNetwork = mockNet
+	defaultNetwork = mockNet
 
 	ip, err := GetTailscaleIP()
 	if err != nil {
@@ -1038,9 +1038,9 @@ func TestGetTailscaleIP_Public(t *testing.T) {
 }
 
 func TestGetTailscaleIP6_Public(t *testing.T) {
-	// Save the original DefaultNetwork and restore it after the test
-	originalNetwork := DefaultNetwork
-	defer func() { DefaultNetwork = originalNetwork }()
+	// Save the original defaultNetwork and restore it after the test
+	originalNetwork := defaultNetwork
+	defer func() { defaultNetwork = originalNetwork }()
 
 	mockNet := &MockNetwork{
 		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
@@ -1069,7 +1069,7 @@ func TestGetTailscaleIP6_Public(t *testing.T) {
 		},
 	}
 
-	DefaultNetwork = mockNet
+	defaultNetwork = mockNet
 
 	ip, err := GetTailscaleIP6()
 	if err != nil {
@@ -1082,9 +1082,9 @@ func TestGetTailscaleIP6_Public(t *testing.T) {
 }
 
 func TestGetTailscaleIP6_Errors(t *testing.T) {
-	// Save the original DefaultNetwork and restore it after the test
-	originalNetwork := DefaultNetwork
-	defer func() { DefaultNetwork = originalNetwork }()
+	// Save the original defaultNetwork and restore it after the test
+	originalNetwork := defaultNetwork
+	defer func() { defaultNetwork = originalNetwork }()
 
 	mockNet := &MockNetwork{
 		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
@@ -1106,7 +1106,7 @@ func TestGetTailscaleIP6_Errors(t *testing.T) {
 		},
 	}
 
-	DefaultNetwork = mockNet
+	defaultNetwork = mockNet
 
 	_, err := GetTailscaleIP6()
 	expectedErr := "tailscale interface not found"
@@ -1116,9 +1116,9 @@ func TestGetTailscaleIP6_Errors(t *testing.T) {
 }
 
 func TestHasTailscaleIP_Public(t *testing.T) {
-	// Save the original DefaultNetwork and restore it after the test
-	originalNetwork := DefaultNetwork
-	defer func() { DefaultNetwork = originalNetwork }()
+	// Save the original defaultNetwork and restore it after the test
+	originalNetwork := defaultNetwork
+	defer func() { defaultNetwork = originalNetwork }()
 
 	mockNet := &MockNetwork{
 		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
@@ -1150,7 +1150,7 @@ func TestHasTailscaleIP_Public(t *testing.T) {
 		},
 	}
 
-	DefaultNetwork = mockNet
+	defaultNetwork = mockNet
 
 	hasIP, err := HasTailscaleIP()
 	if err != nil {
@@ -1162,9 +1162,9 @@ func TestHasTailscaleIP_Public(t *testing.T) {
 }
 
 func TestHasTailscaleIP_NoIPs(t *testing.T) {
-	// Save the original DefaultNetwork and restore it after the test
-	originalNetwork := DefaultNetwork
-	defer func() { DefaultNetwork = originalNetwork }()
+	// Save the original defaultNetwork and restore it after the test
+	originalNetwork := defaultNetwork
+	defer func() { defaultNetwork = originalNetwork }()
 
 	mockNet := &MockNetwork{
 		ParseCIDRFunc: func(s string) (*net.IPNet, error) {
@@ -1176,7 +1176,7 @@ func TestHasTailscaleIP_NoIPs(t *testing.T) {
 		},
 	}
 
-	DefaultNetwork = mockNet
+	defaultNetwork = mockNet
 
 	hasIP, err := HasTailscaleIP()
 	if err == nil {
@@ -1188,7 +1188,7 @@ func TestHasTailscaleIP_NoIPs(t *testing.T) {
 }
 
 func TestRealNetwork_ParseCIDR(t *testing.T) {
-	rn := &RealNetwork{}
+	rn := &realNetwork{}
 	ipNet, err := rn.ParseCIDR("192.168.1.0/24")
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
@@ -1203,7 +1203,7 @@ func TestRealNetwork_ParseCIDR(t *testing.T) {
 }
 
 func TestRealNetwork_ParseIP(t *testing.T) {
-	rn := &RealNetwork{}
+	rn := &realNetwork{}
 	ip, err := rn.ParseIP("192.168.1.1")
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
@@ -1215,7 +1215,7 @@ func TestRealNetwork_ParseIP(t *testing.T) {
 }
 
 func TestRealNetwork_ParseIPInvalidIP(t *testing.T) {
-	rn := &RealNetwork{}
+	rn := &realNetwork{}
 	_, err := rn.ParseIP("192.168.1")
 	if err == nil {
 		t.Errorf("Expected error, got nil")
@@ -1223,7 +1223,7 @@ func TestRealNetwork_ParseIPInvalidIP(t *testing.T) {
 }
 
 func TestRealNetwork_Interfaces(t *testing.T) {
-	rn := &RealNetwork{}
+	rn := &realNetwork{}
 	_, err := rn.Interfaces()
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
@@ -1232,7 +1232,7 @@ func TestRealNetwork_Interfaces(t *testing.T) {
 }
 
 func TestRealNetwork_Addrs(t *testing.T) {
-	rn := &RealNetwork{}
+	rn := &realNetwork{}
 	ifaces, err := rn.Interfaces()
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
