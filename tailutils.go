@@ -18,15 +18,15 @@ type Network interface {
 	Addrs(iface net.Interface) ([]net.Addr, error)
 }
 
-// RealNetwork is the real implementation of the Network interface using the net package.
-type RealNetwork struct{}
+// realNetwork is the real implementation of the Network interface using the net package.
+type realNetwork struct{}
 
-func (rn RealNetwork) ParseCIDR(s string) (*net.IPNet, error) {
+func (rn realNetwork) ParseCIDR(s string) (*net.IPNet, error) {
 	_, ipNet, err := net.ParseCIDR(s)
 	return ipNet, err
 }
 
-func (rn RealNetwork) ParseIP(s string) (net.IP, error) {
+func (rn realNetwork) ParseIP(s string) (net.IP, error) {
 	ip := net.ParseIP(s)
 	if ip == nil {
 		return nil, fmt.Errorf("invalid IP: %s", s)
@@ -34,25 +34,25 @@ func (rn RealNetwork) ParseIP(s string) (net.IP, error) {
 	return ip, nil
 }
 
-func (rn RealNetwork) Interfaces() ([]net.Interface, error) {
+func (rn realNetwork) Interfaces() ([]net.Interface, error) {
 	return net.Interfaces()
 }
 
-func (rn RealNetwork) Addrs(iface net.Interface) ([]net.Addr, error) {
+func (rn realNetwork) Addrs(iface net.Interface) ([]net.Addr, error) {
 	return iface.Addrs()
 }
 
-// DefaultNetwork is the default implementation used in production.
-var DefaultNetwork Network = RealNetwork{}
+// defaultNetwork is the default implementation used in production.
+var defaultNetwork Network = realNetwork{}
 
 // GetTailscaleIP returns the IP address of the tailscale interface.
 func GetTailscaleIP() (string, error) {
-	return getTailscaleIP(DefaultNetwork, tailscaleIP4CIDR)
+	return getTailscaleIP(defaultNetwork, tailscaleIP4CIDR)
 }
 
 // GetTailscaleIP6 returns the IPv6 address of the Tailscale interface.
 func GetTailscaleIP6() (string, error) {
-	return getTailscaleIP(DefaultNetwork, tailscaleIP6CIDR)
+	return getTailscaleIP(defaultNetwork, tailscaleIP6CIDR)
 }
 
 func getTailscaleIP(netImpl Network, cidr string) (string, error) {
@@ -116,13 +116,13 @@ func getTailscaleIP(netImpl Network, cidr string) (string, error) {
 // HasTailscaleIP returns true if the machine has a Tailscale interface (either IPv4 or IPv6).
 func HasTailscaleIP() (bool, error) {
 	// Check if the machine has a Tailscale IPv4 interface
-	hasIPv4, err := hasTailscaleIP(DefaultNetwork)
+	hasIPv4, err := hasTailscaleIP(defaultNetwork)
 	if err != nil {
 		return false, err
 	}
 
 	// Check if the machine has a Tailscale IPv6 interface
-	hasIPv6, err := hasTailscaleIP6(DefaultNetwork)
+	hasIPv6, err := hasTailscaleIP6(defaultNetwork)
 	if err != nil {
 		return false, err
 	}
@@ -148,7 +148,7 @@ func hasTailscaleIP6(netImpl Network) (bool, error) {
 
 // GetInterfaceName returns the name of the network interface for the given IP address
 func GetInterfaceName(ip string) (string, error) {
-	return getInterfaceName(DefaultNetwork, ip)
+	return getInterfaceName(defaultNetwork, ip)
 }
 
 // getInterfaceName returns the name of the network interface for the given IP address, but
