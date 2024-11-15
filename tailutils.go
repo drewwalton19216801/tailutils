@@ -13,7 +13,7 @@ var (
 // Network is an interface that abstracts the network operations used in tailutils.
 type Network interface {
 	ParseCIDR(s string) (*net.IPNet, error)
-	ParseIP(s string) (*net.IP, error)
+	ParseIP(s string) (net.IP, error)
 	Interfaces() ([]net.Interface, error)
 	Addrs(iface net.Interface) ([]net.Addr, error)
 }
@@ -26,9 +26,9 @@ func (rn RealNetwork) ParseCIDR(s string) (*net.IPNet, error) {
 	return ipNet, err
 }
 
-func (rn RealNetwork) ParseIP(s string) (*net.IP, error) {
+func (rn RealNetwork) ParseIP(s string) (net.IP, error) {
 	ip := net.ParseIP(s)
-	return &ip, nil
+	return ip, nil
 }
 
 func (rn RealNetwork) Interfaces() ([]net.Interface, error) {
